@@ -1,16 +1,22 @@
 
 GameScene = Core.class(Sprite)
 
+GameScene.LEFT_MOVE = "1"
+GameScene.RIGHT_MOVE = "2"
+GameScene.UP_MOVE = "3"
+GameScene.DOWN_MOVE = "4"
+
 local half_width = application:getContentWidth() * 0.5
+local floor = math.floor
 
 local level = {
 					{0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-					{0,1,1,1,1,1,1,0,0,0,0,0,0,0},
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
+					{0,1,0,0,0,0,0,1,0,0,0,0,1,0},
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
-					{0,1,1,1,1,1,1,0,1,0,0,0,1,0},
-					{0,1,1,1,1,1,1,0,1,0,0,0,1,0},
-					{0,1,1,1,1,1,1,0,1,0,0,0,1,0},
+					{0,1,0,0,0,0,0,1,1,0,0,0,1,0},
+					{0,1,1,1,1,1,1,1,1,0,0,0,1,0},
+					{0,1,0,0,0,0,0,0,0,0,0,0,1,0},
 					{0,1,1,1,1,1,1,0,1,0,0,0,1,0},
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
 					{0,0,0,0,0,0,0,0,0,0,0,0,0,0}
@@ -42,13 +48,14 @@ function GameScene:enterEnd()
 				square = Bitmap.new(texture_wall)
 			end
 			square:setPosition((col-1)*64,(row-1)*64)
-			square:setAnchorPoint(0.5, 0.5)
+			--square:setAnchorPoint(0.5, 0.5)
 			map:addChild(square)
-			self.squares[row][col] = square
+			--print(level[row][col], row, col)
+			self.squares[row][col] = level[row][col]
 		end
 	end
 	
-	print(#self.squares)
+	--print(#self.squares)
 	
 	self.worldWidth = map:getWidth()
 	self.worldHeight = map:getHeight()
@@ -71,8 +78,8 @@ function GameScene:createPlayer()
 	local texture = Texture.new("images/enemy01.png", true)
 	local player = Bitmap.new(texture)
 	player:setScale(0.5)
-	player:setAnchorPoint(0.5, 0.5)
-	player:setPosition(256,256)
+	--player:setAnchorPoint(0.5, 0.5)
+	player:setPosition(256, 64)
 	self.map:addChild(player)
 	self.player = player
 	
@@ -85,24 +92,33 @@ function GameScene:createCamera()
 	local camera = Camera.new(self.map)
 	camera:setFollowMode()
 	self.camera = camera
-	--self.camera:setTarget(self.player:getPosition())
+	self.camera:setTarget(self.player:getPosition())
 end
 
 -- Update player position
 function GameScene:updatePlayer()
-	local newX = self.player:getX() + self.speedX
-	local newY = self.player:getY() + self.speedY
+	local player = self.player
+	local newX = player:getX() + self.speedX
+	local newY = player:getY() + self.speedY
 	
 	-- Collision with maze
-	self:checkCollision()
-	
-	self.player:setPosition(newX, newY)
-	if (self.player:getX() > half_width-32 and self.player:getX() < self.worldWidth - half_width-32) then
-		self.camera:setTarget(self.player:getPosition())
+	if (not self:checkCollision()) then
+		player:setPosition(newX, newY)
+		--if (self.player:getX() > half_width-32 and self.player:getX() < self.worldWidth - half_width-32) then
+			self.camera:setTarget(player:getPosition())
+		--end
+	else
+		--[[
+		if not (speedX == 0) then
+			player:setX(player:getX() - self.speedX)
+		end
+		if not (speedY == 0) then
+			player:setY(player:getY() - self.speedY)
+		end
+		self.speedX = 0
+		self.speedY = 0
+		]]--
 	end
-	
-	--print("self.map:getX() ", self.map:getX())
-	--print("self.player:getX() ", self.player:getX())
 end
 
 -- Draw left and right arrows to handle the car player
@@ -116,6 +132,7 @@ function GameScene:drawController()
 								event:stopPropagation()
 								self.speedX = -2
 								self.speedY = 0
+								self.next_move = GameScene.LEFT_MOVE
 							end
 						end)	
 	self:addChild(icon_left)
@@ -129,6 +146,7 @@ function GameScene:drawController()
 								event:stopPropagation()
 								self.speedX = 2
 								self.speedY = 0
+								self.next_move = GameScene.RIGHT_MOVE
 							end
 						end)
 	self:addChild(icon_right)
@@ -142,6 +160,7 @@ function GameScene:drawController()
 								event:stopPropagation()
 								self.speedX = 0
 								self.speedY = -2
+								self.next_move = GameScene.UP_MOVE
 							end
 						end)
 	self:addChild(icon_up)
@@ -155,6 +174,7 @@ function GameScene:drawController()
 								event:stopPropagation()
 								self.speedX = 0
 								self.speedY = 2
+								self.next_move = GameScene.DOWN_MOVE
 							end
 						end)
 	self:addChild(icon_down)
@@ -162,23 +182,94 @@ end
 
 -- Collision with maze
 function GameScene:checkCollision()
+
+	if (self.speedX == 0 and self.speedY == 0) then
+		return
+	end
+	
 	local tile_width = 64
 	local player = self.player
+	local squares = self.squares
+	local newX = player:getX() + self.speedX
+	local newY = player:getY() + self.speedY
+	--local current_tile = floor(player:getX() + player:getWidth() * 0.5 + self.speed
+	local left_tile = floor(newX/ tile_width) + 1
+	local right_tile = floor((newX + player:getWidth()) / tile_width) + 1
+	local top_tile = floor(newY / tile_width) + 1
+	local bottom_tile = floor((newY + player:getHeight()) / tile_width) + 1
 	
-	local left_tile = player:getX() / tile_width
-	local right_tile = (player:getX() + player:getWidth()) / tile_width
-	local top_tile = player:getY() / tile_width
-	local bottom_tile = (player:getY() + player:getHeight()) / tile_width
-  
-	print("left", left_tile)
-	print("right", right_tile)
-	print("top", top_tile)
-	print("bottom", bottom_tile)
+	if (self.speedX > 0) then
+		local square = squares[top_tile][right_tile]
+		if (square == 0) then
+			print("x,y", player:getX(), player:getY())
+			print("right_tile", right_tile)
+			print("top_tile", top_tile)
+			player:setX(newX)
+			self.speedX = 0
+			return true
+		end
+	end
 	
-  --[[return rect1.x < rect2.x + rect2.width and
-         rect2.x < rect1.x + rect1.width and
-         rect1.y < rect2.y + rect2.height and
-         rect2.y < rect1.y + rect1.height]]--
+	if (self.speedX < 0) then
+		local square = squares[top_tile][left_tile]
+		if (square == 0) then
+			print("x,y", player:getX(), player:getY())
+			print("left_tile", left_tile)
+			self.speedX = 0
+			return true
+		end
+	end
+	
+	if (self.speedY > 0) then
+		local current_tileX = left_tile + 1
+		local square = squares[bottom_tile][left_tile]
+		if (square == 0) then
+			print("x,y", player:getX(), player:getY())
+			print("current_tileX", left_tile)
+			player:setY(newY)
+			self.speedY = 0
+			return true
+		end
+	end
+	
+	if (self.speedY < 0) then
+		local current_tileX = left_tile + 1
+		local square = squares[top_tile][left_tile]
+		if (square == 0) then
+			print("x,y", player:getX(), player:getY())
+			print("current_tileX", left_tile)
+			self.speedY = 0
+			return true
+		end
+	end
+	
+	--print("left", left_tile)
+	--print("right", right_tile)
+	--print("top", top_tile)
+	--print("bottom", bottom_tile)
+	
+	--[[local collision = false
+	
+	for col=left_tile, right_tile do
+		for row=top_tile, bottom_tile do
+			local square = squares[row][col]
+			if (square == 0) then
+				print("hemos chocado", row, col)
+				print("x,y", player:getX(), player:getY())
+				print("left", left_tile)
+				print("right", right_tile)
+				print("top", top_tile)
+				print("bottom", bottom_tile)
+				local right = player:getX() + player:getWidth()
+				local bottom = player:getY() + player:getHeight()
+				x_overlaps = (player:getX() < right) and (right > player:getWidth())
+				y_overlaps = (player:getY() < bottom) and (bottom > player:getY())
+				--collision = x_overlaps and y_overlaps
+				collision = false
+			end
+		end
+	end
+	]]--
 end
 
 -- Update camera and car player
