@@ -14,10 +14,10 @@ local level = {
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
 					{0,1,0,0,0,0,0,1,0,0,0,0,1,0},
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
-					{0,1,0,0,0,0,0,1,1,0,0,0,1,0},
-					{0,1,1,1,1,1,1,1,1,0,0,0,1,0},
-					{0,1,0,0,0,0,0,0,0,0,0,0,1,0},
-					{0,1,1,1,1,1,1,0,1,0,0,0,1,0},
+					{0,1,0,0,0,0,0,0,1,0,1,0,1,0},
+					{0,1,1,1,1,1,1,1,1,0,1,0,1,0},
+					{0,1,0,0,0,0,0,0,0,0,1,0,1,0},
+					{0,1,0,0,0,0,0,0,0,0,1,0,1,0},
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
 					{0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 					}
@@ -75,9 +75,10 @@ end
 
 -- Create our player
 function GameScene:createPlayer()
-	local texture = Texture.new("images/enemy01.png", true)
+	local texture = Texture.new("images/red.png", true)
 	local player = Bitmap.new(texture)
-	player:setScale(0.5)
+	player:setScale(0.6)
+	--player:setScale(0.5)
 	--player:setAnchorPoint(0.5, 0.5)
 	player:setPosition(256, 64)
 	self.map:addChild(player)
@@ -108,16 +109,15 @@ function GameScene:updatePlayer()
 			self.camera:setTarget(player:getPosition())
 		--end
 	else
-		--[[
-		if not (speedX == 0) then
+		--[[if not (speedX == 0) then
 			player:setX(player:getX() - self.speedX)
 		end
 		if not (speedY == 0) then
 			player:setY(player:getY() - self.speedY)
 		end
+		]]--
 		self.speedX = 0
 		self.speedY = 0
-		]]--
 	end
 end
 
@@ -125,7 +125,7 @@ end
 function GameScene:drawController()
 	local texture_left = Texture.new("images/left.png", true)
 	local icon_left = Bitmap.new(texture_left)
-	icon_left:setPosition(10, 560)
+	icon_left:setPosition(10, 620)
 	icon_left:addEventListener(Event.MOUSE_DOWN,
 						function(event)
 							if (icon_left:hitTestPoint(event.x, event.y)) then
@@ -139,7 +139,7 @@ function GameScene:drawController()
 	
 	local texture_right= Texture.new("images/right.png", true)
 	local icon_right = Bitmap.new(texture_right)
-	icon_right:setPosition(110, 560)
+	icon_right:setPosition(110, 620)
 	icon_right:addEventListener(Event.MOUSE_DOWN,
 						function(event)
 							if (icon_right:hitTestPoint(event.x, event.y)) then
@@ -153,7 +153,7 @@ function GameScene:drawController()
 	
 	local texture_up = Texture.new("images/up.png", true)
 	local icon_up = Bitmap.new(texture_up)
-	icon_up:setPosition(60, 500)
+	icon_up:setPosition(60, 560)
 	icon_up:addEventListener(Event.MOUSE_DOWN,
 						function(event)
 							if (icon_up:hitTestPoint(event.x, event.y)) then
@@ -167,7 +167,7 @@ function GameScene:drawController()
 	
 	local texture_down = Texture.new("images/down.png", true)
 	local icon_down = Bitmap.new(texture_down)
-	icon_down:setPosition(60, 620)
+	icon_down:setPosition(60, 680)
 	icon_down:addEventListener(Event.MOUSE_DOWN,
 						function(event)
 							if (icon_down:hitTestPoint(event.x, event.y)) then
@@ -192,13 +192,12 @@ function GameScene:checkCollision()
 	local squares = self.squares
 	local newX = player:getX() + self.speedX
 	local newY = player:getY() + self.speedY
-	--local current_tile = floor(player:getX() + player:getWidth() * 0.5 + self.speed
 	local left_tile = floor(newX/ tile_width) + 1
 	local right_tile = floor((newX + player:getWidth()) / tile_width) + 1
 	local top_tile = floor(newY / tile_width) + 1
 	local bottom_tile = floor((newY + player:getHeight()) / tile_width) + 1
 	
-	if (self.speedX > 0) then
+	--[[if (self.speedX > 0) then
 		local square = squares[top_tile][right_tile]
 		if (square == 0) then
 			print("x,y", player:getX(), player:getY())
@@ -207,6 +206,8 @@ function GameScene:checkCollision()
 			player:setX(newX)
 			self.speedX = 0
 			return true
+		--elseif (self.next_move !=RIGHT_MOVE) then
+			
 		end
 	end
 	
@@ -242,13 +243,14 @@ function GameScene:checkCollision()
 			return true
 		end
 	end
+	]]--
 	
 	--print("left", left_tile)
 	--print("right", right_tile)
 	--print("top", top_tile)
 	--print("bottom", bottom_tile)
 	
-	--[[local collision = false
+	local collision = false
 	
 	for col=left_tile, right_tile do
 		for row=top_tile, bottom_tile do
@@ -264,12 +266,22 @@ function GameScene:checkCollision()
 				local bottom = player:getY() + player:getHeight()
 				x_overlaps = (player:getX() < right) and (right > player:getWidth())
 				y_overlaps = (player:getY() < bottom) and (bottom > player:getY())
-				--collision = x_overlaps and y_overlaps
-				collision = false
+				collision = x_overlaps and y_overlaps
+				--collision = true
+				return collision
 			end
 		end
 	end
-	]]--
+end
+
+function GameScene:changeMoving()
+	if (self.next_move == LEFT_MOVE) then
+		self.speedX = -2
+		self.speedY = 0
+	elseif (self.next_move == RIGHT_MOVE) then
+		self.speedX = 2
+		self.speedY = 0
+	end
 end
 
 -- Update camera and car player
