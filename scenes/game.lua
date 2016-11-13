@@ -21,6 +21,7 @@ local level = {
 					{0,1,1,1,1,1,1,1,1,1,1,1,1,0},
 					{0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 					}
+local tile_width = 64
 
 -- Constructor
 function GameScene:init()
@@ -77,7 +78,7 @@ end
 function GameScene:createPlayer()
 	local texture = Texture.new("images/red.png", true)
 	local player = Bitmap.new(texture)
-	player:setScale(0.6)
+	--player:setScale(0.6)
 	--player:setScale(0.5)
 	--player:setAnchorPoint(0.5, 0.5)
 	player:setPosition(256, 64)
@@ -102,13 +103,19 @@ function GameScene:updatePlayer()
 	local newX = player:getX() + self.speedX
 	local newY = player:getY() + self.speedY
 	
+	--print("onGridSquare", self:onGridSquare(player:getX(), player:getY()))
+	if (self:onGridSquare(newX, newY)) then
+		self.speedX = 0
+		self.speedY = 0
+	end
+	
 	-- Collision with maze
-	if (not self:checkCollision()) then
+	--if (not self:checkCollision()) then
 		player:setPosition(newX, newY)
 		--if (self.player:getX() > half_width-32 and self.player:getX() < self.worldWidth - half_width-32) then
 			self.camera:setTarget(player:getPosition())
 		--end
-	else
+	--else
 		--[[if not (speedX == 0) then
 			player:setX(player:getX() - self.speedX)
 		end
@@ -116,9 +123,9 @@ function GameScene:updatePlayer()
 			player:setY(player:getY() - self.speedY)
 		end
 		]]--
-		self.speedX = 0
-		self.speedY = 0
-	end
+		--self.speedX = 0
+		--self.speedY = 0
+	--end
 end
 
 -- Draw left and right arrows to handle the car player
@@ -187,7 +194,6 @@ function GameScene:checkCollision()
 		return
 	end
 	
-	local tile_width = 64
 	local player = self.player
 	local squares = self.squares
 	local newX = player:getX() + self.speedX
@@ -282,6 +288,10 @@ function GameScene:changeMoving()
 		self.speedX = 2
 		self.speedY = 0
 	end
+end
+
+function GameScene:onGridSquare(posX, posY)
+	return (posX % tile_width == 0) and (posY % tile_width == 0)
 end
 
 -- Update camera and car player
